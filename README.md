@@ -8,3 +8,6 @@ code chủ yếu để mang tín giáo dục
    >>> Youtube Link : https://www.youtube.com/@apdhygamming <<<
 
    >>> TELEGRAM Bot : APDHY_BOT <<<
+
+   >>> Cảnh báo không chịu trách nhiệm với mội hành động hacking của người sữ dụng 
+>   >> !! tôi không chịu trách nhiệm niếu người sử dụng nhập file này vô đt của người khác !!
